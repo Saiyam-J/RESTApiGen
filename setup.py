@@ -14,4 +14,9 @@ setup(
         "flask-restful",
         "flask-blueprint",
     ],
+    entry_points = {
+        "console_scripts" : [
+            "RESTApiGen = RESTApiGenerator"
+        ]
+    }
 )
