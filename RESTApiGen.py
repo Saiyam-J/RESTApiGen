@@ -49,7 +49,6 @@ class RESTApiGenerator:
     '''
 
     def conn(self):
-        print('Comm is called')
         try:
             connexion = pymysql.connect(
                 host=self.host,
@@ -85,7 +84,7 @@ class RESTApiGenerator:
                     columndetails.append(columninfo)
                 columns.append(columndetails)
             self.tables[table] = columns[1:]
-        print(self.tables)
+ 
         self.makemodels()
 
     # def getrelations(self):
@@ -110,7 +109,6 @@ class RESTApiGenerator:
             self.relations[table] = []
         for table in self.tables:
             tablename = p.singular_noun(table)
-            print(tablename)
             f = open("{}_model.py".format(tablename), 'w')
             f.write('from . import db\n')
             model = ['class {}(db.Model):\n'.format(tablename.capitalize()),
@@ -316,7 +314,7 @@ class RESTApiGenerator:
 
     def makeapp(self):
         os.chdir('..')
-        print(os.getcwd())
+   
         f = open("app.py", "w")
         lines = [
             "from flask import Flask, request, jsonify\n",
@@ -348,16 +346,7 @@ class RESTApiGenerator:
         f.write("app.run(host='0.0.0.0', port=8000, debug=True)")
         f.close()
 
-    # if _ exists in tablename
-    # it is a Has and Belongs To Many(or Many to Many)
-    # check both the words before and after _
-    # for their table name
-    #
-    # Inside REST create <table>_schema.py
-    # os.walk
-    # Generate app.py
-    # Add blueprint context
-    # self.getcolumns()
+  
 RESTApiGenerator()
 
 if len(sys.argv) < 4:
