@@ -14,7 +14,7 @@ setup(
     ],
     entry_points = {
         "console_scripts" : [
-            "RESTApiGen = RESTApiGenerator:loader"
+            "RESTApiGen = RESTApiGen:main"
         ]
     }
 )

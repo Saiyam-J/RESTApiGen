@@ -1,0 +1,6 @@
+# created by virtualenv automatically
+bin/*
+dist/*
+include/*
+lib/*
+src/RESTApiGen.egg-info/*
