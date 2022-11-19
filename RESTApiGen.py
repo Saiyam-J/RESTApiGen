@@ -18,6 +18,7 @@ parser.add_argument("-ho", "--host", required=True)
 parser.add_argument("-us", "--user", required=True)
 parser.add_argument("-pwd", "--password", required=True)
 parser.add_argument("-db", "--database", required=True)
+parser.add_argument("-pt", "--port", default=3306)
 args = parser.parse_args()
 p = inflect.engine()
 
@@ -35,7 +36,7 @@ class RESTApiGenerator:
             user=args.user,
             password=args.password,
             db=args.database,
-            port=3306,
+            port=arg.port,
             **kwargs
     ):
         self.host = host

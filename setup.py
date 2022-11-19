@@ -1,7 +1,5 @@
-
 from setuptools import setup
 
-# Metadata goes in setup.cfg. These are here for GitHub's dependency graph.
 setup(
     name="RESTApiGen",
     version="0.0.1",
@@ -16,7 +14,7 @@ setup(
     ],
     entry_points = {
         "console_scripts" : [
-            "RESTApiGen = RESTApiGenerator"
+            "RESTApiGen = RESTApiGenerator:loader"
         ]
     }
 )
