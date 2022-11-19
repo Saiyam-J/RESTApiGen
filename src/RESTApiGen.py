@@ -1,4 +1,3 @@
-#!/home/keval/Documents/saiyam/bin/python3
 import pymysql, os, argparse, inflect, sys
 
 class RESTApiGenerator:
