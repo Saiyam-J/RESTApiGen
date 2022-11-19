@@ -1,7 +1,5 @@
+#!/home/keval/Documents/saiyam/bin/python3
 import pymysql, os, argparse, inflect, sys
-
-def main():
-    RESTApiGenerator()
 
 class RESTApiGenerator:
 
@@ -10,22 +8,22 @@ class RESTApiGenerator:
     '''
 
     def __init__(self):
-        parser = argparse.ArgumentParser()
-        parser.add_argument("-h", "--host", required=False, default="localhost")
-        parser.add_argument("-u", "--user", required=True)
-        parser.add_argument("-p", "--password", required=True)
-        parser.add_argument("-d", "--database", required=True)
-        parser.add_argument("-po", "--port", required=False, default=3306)
+        parser = argparse.ArgumentParser('RESTApiGen')
+        parser.add_argument("-ho", "--host", dest="host", required=False, default="localhost")
+        parser.add_argument("-u", "--user", dest="user", required=True)
+        parser.add_argument("-p", "--password", dest="password", required=True)
+        parser.add_argument("-d", "--database", dest="db", required=True)
+        parser.add_argument("-po", "--port", dest="port", required=False, default=3306)
         self.args = parser.parse_args()
         self.p = inflect.engine()
         self.conn()
-
+        
     '''
     :param: self
     '''
 
     def conn(self):
-        print('Comm is called')
+        print('Conn is called')
         try:
             connexion = pymysql.connect(
                 host=self.args.host,
@@ -343,3 +341,6 @@ host = sys.argv[2]
 database = sys.argv[3]
 RESTApiGenerator(user=username, password=password, host=host, db=database)
 '''
+
+def main():
+    RESTApiGenerator()
