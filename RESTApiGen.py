@@ -1,62 +1,38 @@
-# import subprocess, os
-# input_file1 = subprocess.run(["which", "python3"], stdout=subprocess.PIPE, text=True)
-# print(input_file1.stdout)
-
-# with open('RESTApiGen.py', 'r') as read_file, open('Dummy_file_zas', 'w') as write_file:
-#     write_file.write("#!{}\n".format(input_file1.stdout))
-
-#     for line in read_file:
-#         write_file.write(line)
-
-# os.remove('RESTApiGen.py')
-# os.rename('Dummy_file_zas', 'RESTApiGen.py')
-
-#!/home/kingcoda/apigen/bin/python3
+#!/usr/bin/python3
 import pymysql, os, argparse, inflect, sys
-parser = argparse.ArgumentParser()
-parser.add_argument("-ho", "--host", required=True)
-parser.add_argument("-us", "--user", required=True)
-parser.add_argument("-pwd", "--password", required=True)
-parser.add_argument("-db", "--database", required=True)
-parser.add_argument("-pt", "--port", default=3306)
-args = parser.parse_args()
-p = inflect.engine()
-
-
-# except:
 
 class RESTApiGenerator:
+
+    def main(self):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("-h", "--host", required=False, default="localhost")
+        parser.add_argument("-u", "--user", required=True)
+        parser.add_argument("-p", "--password", required=True)
+        parser.add_argument("-d", "--database", required=True)
+        parser.add_argument("-po", "--port", required=False, default=3306)
+        self.args = parser.parse_args()
+        self.p = inflect.engine()
+
     '''
     Description: Accepts hostname, username, password and database name
     '''
 
-    def __init__(
-            self,
-            host=args.host,
-            user=args.user,
-            password=args.password,
-            db=args.database,
-            port=arg.port,
-            **kwargs
-    ):
-        self.host = host
-        self.user = user
-        self.password = password
-        self.port = port
-        self.db = db
+    def __init__(self):
         self.conn()
+
     '''
     :param: self
     '''
 
     def conn(self):
+        print('Comm is called')
         try:
             connexion = pymysql.connect(
-                host=self.host,
-                user=self.user,
-                password=self.password,
-                port=self.port,
-                db=self.db
+                host=self.args.host,
+                user=self.args.user,
+                password=self.args.password,
+                port=self.args.port,
+                db=self.args.db
             )
         except:
             print('Nahi hua connect')
@@ -85,7 +61,7 @@ class RESTApiGenerator:
                     columndetails.append(columninfo)
                 columns.append(columndetails)
             self.tables[table] = columns[1:]
- 
+        print(self.tables)
         self.makemodels()
 
     # def getrelations(self):
@@ -99,7 +75,7 @@ class RESTApiGenerator:
                  'from flask_sqlalchemy import SQLAlchemy\n',
                  'app = Flask(__name__)\n',
                  "app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{}:{}@{}:{}/{}'\n".format(
-                     self.user, self.password, self.host, self.port, self.db
+                     self.args.user, self.args.password, self.args.host, self.args.port, self.args.db
                  ),
                  "app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False\n",
                  'db = SQLAlchemy(app)\n']
@@ -109,7 +85,8 @@ class RESTApiGenerator:
         for table in self.tables:
             self.relations[table] = []
         for table in self.tables:
-            tablename = p.singular_noun(table)
+            tablename = self.p.singular_noun(table)
+            print(tablename)
             f = open("{}_model.py".format(tablename), 'w')
             f.write('from . import db\n')
             model = ['class {}(db.Model):\n'.format(tablename.capitalize()),
@@ -125,10 +102,9 @@ class RESTApiGenerator:
 
                     self.enumtables[table][colname] = ''
                 if '_id' in column[0]:
+                    columnstr = "\t{} = db.Column(db.Integer, db.ForeignKey(\'{}\'))\n".format(colname, colname)
                     parent = column[0].split('_')[0]
-                    plural = p.plural(parent)
-                    columnstr = "\t{} = db.Column(db.Integer, db.ForeignKey(\'{}.id\'))\n".format(colname, plural)
-                    model.append(columnstr)
+                    plural = self.p.plural(parent)
                     if plural not in self.tables:
                         print("{} table is missing. Create the table or run with --disable-fk".format(plural))
                         raise Exception("{} table is missing. Create the table or run with --disable-fk".format(plural))
@@ -136,7 +112,8 @@ class RESTApiGenerator:
                         self.relations[plural].append(table)
 
                 else:
-                    x = coldatatype.split("(")
+                    y = coldatatype.find("(")
+                    x = [coldatatype[:y], coldatatype[y:]]
                     dtype = ""
                     length = ""
                     if len(x) == 2:
@@ -170,30 +147,27 @@ class RESTApiGenerator:
                             dtype = "String"
                         case "date":
                             dtype = "DateTime"
-                        case "double":
-                            dtype = "Integer"
                     if (dtype != 'Integer') and (dtype != "DateTime"):
-                        dtype = dtype +"("+ length
+                        dtype = dtype + length
                         if dtype[-1] == "d":
                             dtype = dtype.replace(" ", ", ")
                             dtype = dtype + " = True"
                     columnstr = '\t{} = db.Column(db.{})\n'.format(column[0], dtype)
-                    model.append(columnstr)
-            f.writelines(model)
-            f.close()
+                model.append(columnstr)
         for table in self.tables:
-            tablename = p.singular_noun(table)
-            f = open("{}_model.py".format(tablename), 'a')
-            model_closing = []
+            tablename = self.p.singular_noun(table)
             for relation in self.relations[table]:
-                relationname = p.singular_noun(relation)
-                backref = "\t{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))\n".format(relation, relationname.capitalize(), tablename, relation.capitalize())
-                model_closing.append(backref)
-            model_closing.extend([
+                relationname = self.p.singular_noun(relation)
+                backref = "{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))".format(relation,
+                                                                                              relationname.capitalize(),
+                                                                                              tablename,
+                                                                                              relation.capitalize())
+                model.append(backref)
+            model.extend([
                 "\n\tdef __repr__(self):\n",
                 "\t\treturn '<{} %r>' % self.{}\n".format(tablename.capitalize(), self.tables[table][0][0])
             ])
-            f.writelines(model_closing)
+            f.writelines(model)
             f.close()
         self.makeRest()
 
@@ -209,7 +183,7 @@ class RESTApiGenerator:
                  "from flask_marshmallow import Marshmallow\n\n",
                  "app = Flask(__name__)\n",
                  "app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{}:{}@{}:{}/{}'\n".format(
-                     self.user, self.password, self.host, self.port, self.db
+                     self.args.user, self.args.password, self.args.host, self.args.port, self.args.db
                  ),
                  "app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False\n",
                  "db = SQLAlchemy(app)\n",
@@ -219,7 +193,7 @@ class RESTApiGenerator:
         finit.writelines(lines)
         _all_ = "["
         for i in self.tables:
-            singular = p.singular_noun(i)
+            singular = self.p.singular_noun(i)
             _all_ = _all_ + "\"" + singular + "_schema\", "
         _all_ = _all_[:-2] + "]"
         __all__ = "__all__ =" + _all_
@@ -227,7 +201,7 @@ class RESTApiGenerator:
         finit.close()
         for table in self.tables:
             hasenum = table in self.enumtables
-            tablename = p.singular_noun(table)
+            tablename = self.p.singular_noun(table)
             f = open("{}_schema.py".format(tablename), 'w')
             imports = ['from . import db, Api, ma, Blueprint, Resource, request\n',
                        'from Models.{}_model import {}\n'.format(tablename, tablename.capitalize())]
@@ -267,7 +241,6 @@ class RESTApiGenerator:
             listresource.extend(validation)
             listresource.append("\t\tnew_{} = {}(\n".format(tablename, tablename.capitalize()))
 
-
             for i in fields:
                 listresource.append("\t\t{}=request.form['{}'],\n".format(i, i))
 
@@ -284,9 +257,8 @@ class RESTApiGenerator:
                 "\tdef patch(self, {}_id):\n".format(tablename)]
             resource.extend(validation)
             resource.append("\t\t{} = {}.query.get_or_404({}_id)\n".format(tablename,
-                                                               tablename.capitalize(),
-                                                               tablename))
-
+                                                                           tablename.capitalize(),
+                                                                           tablename))
 
             for i in fields:
                 resource.append(
@@ -315,7 +287,7 @@ class RESTApiGenerator:
 
     def makeapp(self):
         os.chdir('..')
-   
+        print(os.getcwd())
         f = open("app.py", "w")
         lines = [
             "from flask import Flask, request, jsonify\n",
@@ -341,14 +313,23 @@ class RESTApiGenerator:
         ]
         f.writelines(lines)
         for table in self.tables:
-            tablename = p.singular_noun(table)
+            tablename = self.p.singular_noun(table)
             f.write("app.register_blueprint({}_schema.create_api_bp())\n".format(tablename))
 
         f.write("app.run(host='0.0.0.0', port=8000, debug=True)")
         f.close()
 
-  
-RESTApiGenerator()
+    # if _ exists in tablename
+    # it is a Has and Belongs To Many(or Many to Many)
+    # check both the words before and after _
+    # for their table name
+    #
+    # Inside REST create <table>_schema.py
+    # os.walk
+    # Generate app.py
+    # Add blueprint context
+    # self.getcolumns()
+
 
 if len(sys.argv) < 4:
     print("type \"RESTAPIGen help\" for Help")
