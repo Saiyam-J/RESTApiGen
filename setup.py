@@ -6,7 +6,7 @@ setup(
     install_requires=[
         "pymysql >= 1.0.2",
         "python_version >= '3.10'",
-        "Inflector >=3.0.1",
+        "inflect >=6.0.2",
         "flask",
         "flask-sqlalchemy",
         "flask-restful",
