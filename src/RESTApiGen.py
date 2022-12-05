@@ -150,22 +150,19 @@ class RESTApiGenerator:
                             dtype = dtype.replace(" ", ", ")
                             dtype = dtype + " = True"
                     columnstr = '\t{} = db.Column(db.{})\n'.format(column[0], dtype)
-                model.append(columnstr)
-        for table in self.tables:
-            tablename = self.p.singular_noun(table)
-            for relation in self.relations[table]:
-                relationname = self.p.singular_noun(relation)
-                backref = "{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))".format(relation,
-                                                                                              relationname.capitalize(),
-                                                                                              tablename,
-                                                                                              relation.capitalize())
-                model.append(backref)
-            model.extend([
-                "\n\tdef __repr__(self):\n",
-                "\t\treturn '<{} %r>' % self.{}\n".format(tablename.capitalize(), self.tables[table][0][0])
-            ])
+                    model.append(columnstr)
+            print("Test 1 PASSED")
+            for table2 in self.tables:
+                tablename2 = self.p.singular_noun(table2)
+                for relation in self.relations[table2]:
+                    relationname = self.p.singular_noun(relation)
+                    backref = "\t{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))".format(relation, relationname.capitalize(), tablename2.capitalize(), relation.capitalize())
+                    model.append(backref)s
+            model.append("\n\tdef __repr__(self):\n")
+            model.append("\t\treturn '<{} %r>' % self.{}\n".format(tablename.capitalize(), self.tables[table][0][0]))
+            print(model)
             f.writelines(model)
-            f.close()
+        f.close()
         self.makeRest()
 
     def makeRest(self):
@@ -212,7 +209,7 @@ class RESTApiGenerator:
                     f.write("{}vals = {}\n".format(enumcolumn, self.enumtables[table][enumcolumn]))
                     if validation == []:
                         validation = ["\t\tif request.form[\'{}\'] in {}vals:\n".format(enumcolumn, enumcolumn),
-                                      "\t\t\traise Exception(422)"]
+                                      "\t\t\traise Exception(422)\n"]
                     else:
                         validation[0] = validation[0][:-2] + " and request.form[\'{}\'] in {}vals:\n".format(enumcolumn,
                                                                                                              enumcolumn)
@@ -295,7 +292,7 @@ class RESTApiGenerator:
             "from flask_blueprint import Blueprint\n",
             "app = Flask(__name__)\n",
             "app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{}:{}@{}:{}/{}'\n".format(
-                self.user, self.password, self.host, self.port, self.db
+                self.args.user, self.args.password, self.args.host, self.args.port, self.args.db
             ),
             "app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False\n",
             "db = SQLAlchemy(app)\n",
