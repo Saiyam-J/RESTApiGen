@@ -166,6 +166,7 @@ class RESTApiGenerator:
         self.makeRest()
 
     def makeRest(self):
+
         os.chdir('..')
         os.mkdir('REST')
         os.chdir('REST')
@@ -280,6 +281,7 @@ class RESTApiGenerator:
         self.makeapp()
 
     def makeapp(self):
+
         os.chdir('..')
         print(os.getcwd())
         f = open("app.py", "w")
@@ -303,8 +305,8 @@ class RESTApiGenerator:
             "@app.route(\"/\")\n",
             "def home():\n",
             "\treturn {\"success\":\"true\"}\n\n\n"
-
         ]
+
         f.writelines(lines)
         for table in self.tables:
             tablename = self.p.singular_noun(table)
@@ -312,31 +314,11 @@ class RESTApiGenerator:
 
         f.write("app.run(host='0.0.0.0', port=8000, debug=True)")
         f.close()
-
-    # if _ exists in tablename
-    # it is a Has and Belongs To Many(or Many to Many)
-    # check both the words before and after _
-    # for their table name
-    #
-    # Inside REST create <table>_schema.py
-    # os.walk
-    # Generate app.py
-    # Add blueprint context
-    # self.getcolumns()
-
-
+        
 if len(sys.argv) < 4:
     print("type \"RESTAPIGen help\" for Help")
 
 if sys.argv[0] == "help":
     print("Enter your username, password, host and database in this order to generate the code.")
-'''
-username = sys.argv[0]
-password = sys.argv[1]
-host = sys.argv[2]
-database = sys.argv[3]
-RESTApiGenerator(user=username, password=password, host=host, db=database)
-'''
-
 def main():
     RESTApiGenerator()
