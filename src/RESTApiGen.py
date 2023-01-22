@@ -22,7 +22,7 @@ class RESTApiGenerator:
     '''
 
     def conn(self):
-        print('Conn is called')
+        print('Connecting to database')
         try:
             connexion = pymysql.connect(
                 host=self.args.host,
@@ -32,7 +32,6 @@ class RESTApiGenerator:
                 db=self.args.db
             )
         except:
-            print('Nahi hua connect')
             return "Unable to connect to the database"
         self.cursor = connexion.cursor()
         self.gettables()
@@ -42,7 +41,7 @@ class RESTApiGenerator:
         tables = self.cursor.fetchall()
         self.tables = {}
         self.enumtables = {}
-        for table in tables:
+        for table in tables: 
             self.tables[(table[0])] = None
         self.getcolumns()
 
@@ -58,13 +57,28 @@ class RESTApiGenerator:
                     columndetails.append(columninfo)
                 columns.append(columndetails)
             self.tables[table] = columns[1:]
-        print(self.tables)
-        self.makemodels()
+        self.getrelations()
 
-    # def getrelations(self):
-
+    def getrelations(self):
+        self.relations = {}
+        for table in self.tables:
+            self.relations[table] = []
+        for table in self.tables:
+            tablename = self.p.singular_noun(table)
+            columns = self.tables[table]
+            for column in columns:
+                if '_id' in column[0]:
+                    parent = column[0].split('_id')[0]
+                    plural = self.p.plural(parent)
+                    if plural not in self.tables:
+                        print("{} table is missing. Create the table or run with --disable-fk".format(plural))
+                        raise Exception("{} table is missing. Create the table or run with --disable-fk".format(plural))
+                    else:
+                        self.relations[plural].append(table)
+        self.makemodels()    
+    
     def makemodels(self):
-
+        print("\n\nMaking Models.....\n")
         os.mkdir('Models')
         os.chdir('Models')
         finit = open('__init__.py', 'w')
@@ -78,12 +92,9 @@ class RESTApiGenerator:
                  'db = SQLAlchemy(app)\n']
         finit.writelines(lines)
         finit.close()
-        self.relations = {}
-        for table in self.tables:
-            self.relations[table] = []
+        
         for table in self.tables:
             tablename = self.p.singular_noun(table)
-            print(tablename)
             f = open("{}_model.py".format(tablename), 'w')
             f.write('from . import db\n')
             model = ['class {}(db.Model):\n'.format(tablename.capitalize()),
@@ -99,26 +110,19 @@ class RESTApiGenerator:
 
                     self.enumtables[table][colname] = ''
                 if '_id' in column[0]:
-                    columnstr = "\t{} = db.Column(db.Integer, db.ForeignKey(\'{}\'))\n".format(colname, colname)
                     parent = column[0].split('_')[0]
                     plural = self.p.plural(parent)
-                    if plural not in self.tables:
-                        print("{} table is missing. Create the table or run with --disable-fk".format(plural))
-                        raise Exception("{} table is missing. Create the table or run with --disable-fk".format(plural))
-                    else:
-                        self.relations[plural].append(table)
-
+                    columnstr = "\t{} = db.Column(db.Integer, db.ForeignKey(\'{}.id\'))\n".format(colname, plural)
                 else:
-                    y = coldatatype.find("(")
-                    x = [coldatatype[:y], coldatatype[y:]]
-                    dtype = ""
-                    length = ""
-                    if len(x) == 2:
-                        dtype = x[0]
-                        length = x[1]
-                    else:
-                        x = coldatatype.split(" ")
-                        dtype = x[0]
+                    if "(" in coldatatype:
+                        y = coldatatype.find("(")
+                        x = [coldatatype[:y], coldatatype[y:]]
+                    else: 
+                        x = [coldatatype, ""]
+
+                    dtype = x[0]
+                    length = x[1]
+                    
                     match dtype:
                         case "int":
                             dtype = "Integer"
@@ -150,23 +154,21 @@ class RESTApiGenerator:
                             dtype = dtype.replace(" ", ", ")
                             dtype = dtype + " = True"
                     columnstr = '\t{} = db.Column(db.{})\n'.format(column[0], dtype)
-                    model.append(columnstr)
-            print("Test 1 PASSED")
-            for table2 in self.tables:
-                tablename2 = self.p.singular_noun(table2)
-                for relation in self.relations[table2]:
-                    relationname = self.p.singular_noun(relation)
-                    backref = "\t{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))".format(relation, relationname.capitalize(), tablename2.capitalize(), relation.capitalize())
-                    model.append(backref)s
+                model.append(columnstr)
+
+            for relation in self.relations[table]:
+                relationname = self.p.singular_noun(relation)
+                backref = "\t{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))\n".format(relation, relationname.capitalize(), tablename.capitalize(), relation.capitalize())
+                model.append(backref)
             model.append("\n\tdef __repr__(self):\n")
             model.append("\t\treturn '<{} %r>' % self.{}\n".format(tablename.capitalize(), self.tables[table][0][0]))
-            print(model)
             f.writelines(model)
-        f.close()
+            f.close()
+            print("Finished making {}_model".format(tablename))
         self.makeRest()
 
     def makeRest(self):
-
+        print("\n\nMaking REST APIs......\n")
         os.chdir('..')
         os.mkdir('REST')
         os.chdir('REST')
@@ -193,16 +195,24 @@ class RESTApiGenerator:
         _all_ = _all_[:-2] + "]"
         __all__ = "__all__ =" + _all_
         finit.write(__all__)
+        dictify = [
+            "\ndef dictify(table):\n"
+            "\ttabledict = table.__dict__\n",
+            "\tdel tabledict[\'_sa_instance_state\']\n",
+            "\treturn tabledict\n"
+        ]
+        finit.writelines(dictify)
         finit.close()
         for table in self.tables:
             hasenum = table in self.enumtables
             tablename = self.p.singular_noun(table)
             f = open("{}_schema.py".format(tablename), 'w')
-            imports = ['from . import db, Api, ma, Blueprint, Resource, request\n',
-                       'from Models.{}_model import {}\n'.format(tablename, tablename.capitalize())]
+            imports = ['from . import db, Api, ma, Blueprint, Resource, request',
+                       '\nfrom Models.{}_model import {}\n'.format(tablename, tablename.capitalize())]
+            if len(self.relations[table])>0:
+                imports[0]+=', dictify'
             f.writelines(imports)
             enumvals = []
-
             validation = []
             if hasenum:
 
@@ -228,62 +238,83 @@ class RESTApiGenerator:
             schema.extend(['\t\tmodel = {}\n\n'.format(tablename.capitalize()),
                            "{}_schema = {}Schema()\n".format(tablename, tablename.capitalize()),
                            "{}_schema = {}Schema(many=True)\n\n".format(table, tablename.capitalize())])
-            listresource = [
+            listresource = {"get":[], "post":[]}
+            
+            listresource["get"] = [
                 "class {}ListResource(Resource):\n\tdef get(self):\n".format(tablename.capitalize()),
-                "\t\t{} = {}.query.all()\n\t\treturn {}_schema.dump({})\n".format(table, tablename.capitalize(), table,
-                                                                                  table),
-                "\tdef post(self):\n"]
-            listresource.extend(validation)
-            listresource.append("\t\tnew_{} = {}(\n".format(tablename, tablename.capitalize()))
+                "\t\t{} = {}.query.all()\n".format(table, tablename.capitalize()),
+                "\t\treturn {}_schema.dump({})\n".format(table,table)
+                ]
+            listresource["post"]=["\tdef post(self):\n"]
+            listresource["post"].extend(validation)
+            listresource["post"].append("\t\tnew_{} = {}(\n".format(tablename, tablename.capitalize()))
 
             for i in fields:
-                listresource.append("\t\t{}=request.form['{}'],\n".format(i, i))
+                listresource["post"].append("\t\t{}=request.form['{}'],\n".format(i, i))
 
-            listresource.append(
+            listresource["post"].append(
                 "\t\t)\n\t\tdb.session.add(new_{})\n\t\tdb.session.commit()\n\t\treturn {}_schema.dump(new_{})\n".format(
                     tablename, tablename, tablename))
 
-            resource = [
-                "\nclass {}Resource(Resource):\n\tdef get(self, {}_id):\n".format(tablename.capitalize(), tablename),
-                "\t\t{} = {}.query.get_or_404({}_id)\n\t\treturn {}_schema.dump({})\n".format(tablename,
-                                                                                              tablename.capitalize(),
-                                                                                              tablename, tablename,
-                                                                                              tablename),
-                "\tdef patch(self, {}_id):\n".format(tablename)]
-            resource.extend(validation)
-            resource.append("\t\t{} = {}.query.get_or_404({}_id)\n".format(tablename,
+
+            resource = {"get":[], "patch":[], "delete":[]}
+
+            resource["get"] = [
+                "\nclass {}Resource(Resource):\n\tdef get(self, {}_id):\n".format(tablename.capitalize(), tablename), 
+                "\t\t{} = {}.query.get_or_404({}_id)\n".format(tablename,tablename.capitalize(), tablename)]
+            if len(self.relations[table])>0:
+                resource["get"].append("\t\tresult = {}_schema.dump({})\n".format(tablename, tablename))
+                for relation in self.relations[table]:
+                    singular_relation = self.p.singular_noun(relation)
+                    resource["get"].extend([
+                        "\t\tresult[\"{}\"]=[]\n".format(relation),
+                        "\t\tfor {} in {}.{}:\n".format(singular_relation, tablename, relation),
+                        "\t\t\tresult[\"{}\"].append(dictify({}))\n".format(relation, singular_relation),
+                        ])
+                resource["get"].append("\t\treturn result\n")
+
+            else:                
+                resource["get"].append("\t\treturn {}_schema.dump({})\n".format(tablename, tablename))
+
+
+            resource["patch"] = ["\tdef patch(self, {}_id):\n".format(tablename)]
+            resource["patch"].extend(validation)
+            resource["patch"].append("\t\t{} = {}.query.get_or_404({}_id)\n".format(tablename,
                                                                            tablename.capitalize(),
                                                                            tablename))
 
             for i in fields:
-                resource.append(
+                resource["patch"].append(
                     "\t\tif '{}' in request.form:\n\t\t\t{}.{} = request.form['{}']\n".format(i, tablename, i, i))
-            resource.append(
+            resource["patch"].append(
                 "\t\tdb.session.add({})\n\t\tdb.session.commit()\n\t\treturn {}_schema.dump({})\n".format(tablename,
                                                                                                           tablename,
                                                                                                           tablename))
-            resource.append("\tdef delete(self, profile_id):\n\t\taddress = Address.query.get_or_404(address_id)\n")
-            resource.append("\t\tdb.session.delete(address)\n\t\tdb.session.commit()\n\t\treturn '', 204\n")
+
+            resource["delete"] = ["\tdef delete(self, profile_id):\n\t\taddress = Address.query.get_or_404(address_id)\n",
+                            "\t\tdb.session.delete(address)\n\t\tdb.session.commit()\n\t\treturn '', 204\n"]
 
             api_bp = [
                 "def create_api_bp():\n\tapi_bp = Blueprint('{}_api', __name__)\n\tapi = Api(api_bp)\n".format(
                     tablename),
                 "\tapi.add_resource({}ListResource, '/{}')".format(tablename.capitalize(), table),
                 "\n\tapi.add_resource({}Resource, '/{}/<int:{}_id>')\n\treturn api_bp".format(
-                    tablename.capitalize(), table, tablename.capitalize(), tablename, tablename)
+                    tablename.capitalize(), table, tablename)
             ]
             f.writelines(schema)
-            f.writelines(listresource)
-            f.writelines(resource)
+            f.writelines(listresource["get"])
+            f.writelines(listresource["post"])
+            f.writelines(resource["get"])
+            f.writelines(resource["patch"])
+            f.writelines(resource["delete"])
             f.writelines(api_bp)
             f.close()
-
+            print("Finished making {}_schema".format(tablename))
         self.makeapp()
 
     def makeapp(self):
-
+        print("\nMaking app.py")
         os.chdir('..')
-        print(os.getcwd())
         f = open("app.py", "w")
         lines = [
             "from flask import Flask, request, jsonify\n",
@@ -314,9 +345,9 @@ class RESTApiGenerator:
 
         f.write("app.run(host='0.0.0.0', port=8000, debug=True)")
         f.close()
-        
+        print("\nAll processes complete. Try running app.py to check your APIs")        
 if len(sys.argv) < 4:
-    print("type \"RESTAPIGen help\" for Help")
+    print("type \"RESTApiGen help\" for Help")
 
 if sys.argv[0] == "help":
     print("Enter your username, password, host and database in this order to generate the code.")
