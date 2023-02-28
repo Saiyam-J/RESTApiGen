@@ -17,9 +17,6 @@ class RESTApiGenerator:
         self.p = inflect.engine()
         self.conn()
         
-    '''
-    :param: self
-    '''
 
     def conn(self):
         print('Connecting to database')
@@ -82,14 +79,7 @@ class RESTApiGenerator:
         os.mkdir('Models')
         os.chdir('Models')
         finit = open('__init__.py', 'w')
-        lines = ['from flask import Flask, request\n',
-                 'from flask_sqlalchemy import SQLAlchemy\n',
-                 'app = Flask(__name__)\n',
-                 "app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{}:{}@{}:{}/{}'\n".format(
-                     self.args.user, self.args.password, self.args.host, self.args.port, self.args.db
-                 ),
-                 "app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False\n",
-                 'db = SQLAlchemy(app)\n']
+        lines = ['from __main__ import db\n']
         finit.writelines(lines)
         finit.close()
         
@@ -158,7 +148,7 @@ class RESTApiGenerator:
 
             for relation in self.relations[table]:
                 relationname = self.p.singular_noun(relation)
-                backref = "\t{} = db.relation(\'{}\', backref = db.backref(\"{}Of{}\"))\n".format(relation, relationname.capitalize(), tablename.capitalize(), relation.capitalize())
+                backref = "\t{} = db.relationship(\'{}\', backref = db.backref(\"{}Of{}\"))\n".format(relation, relationname.capitalize(), tablename.capitalize(), relation.capitalize())
                 model.append(backref)
             model.append("\n\tdef __repr__(self):\n")
             model.append("\t\treturn '<{} %r>' % self.{}\n".format(tablename.capitalize(), self.tables[table][0][0]))
@@ -177,6 +167,7 @@ class RESTApiGenerator:
                  "from flask import Blueprint as Blueprint\n",
                  "from flask_sqlalchemy import SQLAlchemy\n",
                  "from flask_restful import Api, Resource\n",
+                 "from datetime import datetime\n"
                  "from flask_marshmallow import Marshmallow\n\n",
                  "app = Flask(__name__)\n",
                  "app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{}:{}@{}:{}/{}'\n".format(
@@ -196,10 +187,12 @@ class RESTApiGenerator:
         __all__ = "__all__ =" + _all_
         finit.write(__all__)
         dictify = [
-            "\ndef dictify(table):\n"
-            "\ttabledict = table.__dict__\n",
-            "\tdel tabledict[\'_sa_instance_state\']\n",
-            "\treturn tabledict\n"
+    "\n\ndef dictify(table):\n",
+    "\tdel table.__dict__['_sa_instance_state']\n",
+    '\treturnable = {}\n',
+    "\tfor item in table.__dict__:\n",
+    '\t\treturnable[item] = str(table.__dict__[item]) if isinstance(table.__dict__[item], datetime) else table.__dict__[item]\n',
+    "\treturn returnable\n"
         ]
         finit.writelines(dictify)
         finit.close()
@@ -207,8 +200,9 @@ class RESTApiGenerator:
             hasenum = table in self.enumtables
             tablename = self.p.singular_noun(table)
             f = open("{}_schema.py".format(tablename), 'w')
-            imports = ['from . import db, Api, ma, Blueprint, Resource, request',
-                       '\nfrom Models.{}_model import {}\n'.format(tablename, tablename.capitalize())]
+            imports = ['from . import Api, ma, Blueprint, Resource, request',
+                       '\nfrom __main__ import db\n',
+                       'from Models.{}_model import {}\n'.format(tablename, tablename.capitalize())]
             if len(self.relations[table])>0:
                 imports[0]+=', dictify'
             f.writelines(imports)
@@ -219,10 +213,10 @@ class RESTApiGenerator:
                 for enumcolumn in self.enumtables[table]:
                     f.write("{}vals = {}\n".format(enumcolumn, self.enumtables[table][enumcolumn]))
                     if validation == []:
-                        validation = ["\t\tif request.form[\'{}\'] in {}vals:\n".format(enumcolumn, enumcolumn),
+                        validation = ["\t\tif request.json.get(\'{}\') not in {}vals:\n".format(enumcolumn, enumcolumn),
                                       "\t\t\traise Exception(422)\n"]
                     else:
-                        validation[0] = validation[0][:-2] + " and request.form[\'{}\'] in {}vals:\n".format(enumcolumn,
+                        validation[0] = validation[0][:-2] + " and request.json(\'{}\') not in {}vals:\n".format(enumcolumn,
                                                                                                              enumcolumn)
             schema = ['class {}Schema(ma.Schema):\n'.format(tablename.capitalize()),
                       '\tclass Meta:\n']
@@ -250,7 +244,7 @@ class RESTApiGenerator:
             listresource["post"].append("\t\tnew_{} = {}(\n".format(tablename, tablename.capitalize()))
 
             for i in fields:
-                listresource["post"].append("\t\t{}=request.form['{}'],\n".format(i, i))
+                listresource["post"].append("\t\t{}=request.json.get('{}'),\n".format(i, i))
 
             listresource["post"].append(
                 "\t\t)\n\t\tdb.session.add(new_{})\n\t\tdb.session.commit()\n\t\treturn {}_schema.dump(new_{})\n".format(
@@ -285,14 +279,16 @@ class RESTApiGenerator:
 
             for i in fields:
                 resource["patch"].append(
-                    "\t\tif '{}' in request.form:\n\t\t\t{}.{} = request.form['{}']\n".format(i, tablename, i, i))
+                    "\t\tif request.json.get('{}') is not None:\n\t\t\t{}.{} = request.json.get('{}')\n".format(i, tablename, i, i))
             resource["patch"].append(
-                "\t\tdb.session.add({})\n\t\tdb.session.commit()\n\t\treturn {}_schema.dump({})\n".format(tablename,
+                "\t\tdb.session.commit()\n\t\treturn {}_schema.dump({})\n".format(tablename,
                                                                                                           tablename,
                                                                                                           tablename))
 
-            resource["delete"] = ["\tdef delete(self, profile_id):\n\t\taddress = Address.query.get_or_404(address_id)\n",
-                            "\t\tdb.session.delete(address)\n\t\tdb.session.commit()\n\t\treturn '', 204\n"]
+            resource["delete"] = [
+                            "\tdef delete(self, {}_id):\n".format(tablename),
+                            "\t\t{}= {}.query.get_or_404({}_id)\n".format(tablename, tablename.capitalize(), tablename),
+                            "\t\tdb.session.delete({})\n\t\tdb.session.commit()\n\t\treturn '', 204\n".format(tablename)]
 
             api_bp = [
                 "def create_api_bp():\n\tapi_bp = Blueprint('{}_api', __name__)\n\tapi = Api(api_bp)\n".format(
@@ -317,12 +313,10 @@ class RESTApiGenerator:
         os.chdir('..')
         f = open("app.py", "w")
         lines = [
-            "from flask import Flask, request, jsonify\n",
-            "from sqlalchemy import ForeignKey\n",
+            "from flask import Flask\n",
             "from flask_sqlalchemy import SQLAlchemy\n",
             "from flask_marshmallow import Marshmallow\n",
-            "from flask_restful import Api, Resource\n",
-            "from flask_blueprint import Blueprint\n",
+            "from flask_restful import Api\n",
             "app = Flask(__name__)\n",
             "app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://{}:{}@{}:{}/{}'\n".format(
                 self.args.user, self.args.password, self.args.host, self.args.port, self.args.db
