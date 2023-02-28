@@ -54,7 +54,6 @@ class RESTApiGenerator:
                     columndetails.append(columninfo)
                 columns.append(columndetails)
             self.tables[table] = columns[1:]
-        print(self.tables)
         self.getrelations()
 
     def getrelations(self):
@@ -95,8 +94,6 @@ class RESTApiGenerator:
             for column in columns:
                 colname = column[0]
                 coldatatype = column[1]
-                nullable = 'True' if column[2]=='YES' else 'False'
-                default= 'None' if column[4]==None else column[4]
                 if coldatatype[:4] == "enum":
                     if table not in self.enumtables:
                         self.enumtables[table] = {}
@@ -146,8 +143,7 @@ class RESTApiGenerator:
                         if dtype[-1] == "d":
                             dtype = dtype.replace(" ", ", ")
                             dtype = dtype + " = True"
-                    columnstr = '\t{} = db.Column(db.{}, nullable={})\n'.format(column[0], dtype,
-                                                                                                nullable)
+                    columnstr = '\t{} = db.Column(db.{})\n'.format(column[0], dtype)
                 model.append(columnstr)
 
             for relation in self.relations[table]:
@@ -159,7 +155,6 @@ class RESTApiGenerator:
             f.writelines(model)
             f.close()
             print("Finished making {}_model".format(tablename))
-        print(self.tables)
         self.makeRest()
 
     def makeRest(self):
@@ -218,10 +213,10 @@ class RESTApiGenerator:
                 for enumcolumn in self.enumtables[table]:
                     f.write("{}vals = {}\n".format(enumcolumn, self.enumtables[table][enumcolumn]))
                     if validation == []:
-                        validation = ["\t\tif request.get_json()[\'{}\'] not in {}vals:\n".format(enumcolumn, enumcolumn),
+                        validation = ["\t\tif request.json.get(\'{}\') not in {}vals:\n".format(enumcolumn, enumcolumn),
                                       "\t\t\traise Exception(422)\n"]
                     else:
-                        validation[0] = validation[0][:-2] + " and request.get_json()[\'{}\'] not in {}vals:\n".format(enumcolumn,
+                        validation[0] = validation[0][:-2] + " and request.json(\'{}\') not in {}vals:\n".format(enumcolumn,
                                                                                                              enumcolumn)
             schema = ['class {}Schema(ma.Schema):\n'.format(tablename.capitalize()),
                       '\tclass Meta:\n']
@@ -249,7 +244,7 @@ class RESTApiGenerator:
             listresource["post"].append("\t\tnew_{} = {}(\n".format(tablename, tablename.capitalize()))
 
             for i in fields:
-                listresource["post"].append("\t\t{}=request.get_json()['{}'],\n".format(i, i))
+                listresource["post"].append("\t\t{}=request.json.get('{}'),\n".format(i, i))
 
             listresource["post"].append(
                 "\t\t)\n\t\tdb.session.add(new_{})\n\t\tdb.session.commit()\n\t\treturn {}_schema.dump(new_{})\n".format(
@@ -284,7 +279,7 @@ class RESTApiGenerator:
 
             for i in fields:
                 resource["patch"].append(
-                    "\t\tif request.get_json()['{}'] is not None:\n\t\t\t{}.{} = request.get_json()['{}']\n".format(i, tablename, i, i))
+                    "\t\tif request.json.get('{}') is not None:\n\t\t\t{}.{} = request.json.get('{}')\n".format(i, tablename, i, i))
             resource["patch"].append(
                 "\t\tdb.session.commit()\n\t\treturn {}_schema.dump({})\n".format(tablename,
                                                                                                           tablename,
