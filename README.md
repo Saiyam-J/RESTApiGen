@@ -21,7 +21,7 @@ RESTAPIGen is a tool that works with an existing SQL database and autogenerates 
 - This tool is created to facilitate development of an API for **intermediate to advanced Flask Users**.
 - Beginners must learn how to create API using Flask by referring to their documentation.
 - The idea of the tool was to eliminate the monotonous coding which could have been automated.
-- Before beginning, you must also know how to _sematically_ create your database and establish relationships.
+- Before beginning, you must also know how to _semantically_ create your database and establish relationships.
 - The tool heavily relies on a semantic approach of how the database was created and columns were named. Example: The Primary Key of Users table does **not** have to be called `UserID`. It is just an `id`.
 - Follow naming conventions and semantics. **Tables MUST always be named in Plural and Foreign Keys are always named in Singular**. Example: The JOIN should work on Users.id = Profiles.user_id
 - Enjoy, and git gud!
