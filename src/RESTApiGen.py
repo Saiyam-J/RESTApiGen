@@ -54,7 +54,6 @@ class RESTApiGenerator:
                     columndetails.append(columninfo)
                 columns.append(columndetails)
             self.tables[table] = columns[1:]
-        print(self.tables)
         self.getrelations()
 
     def getrelations(self):
@@ -159,7 +158,6 @@ class RESTApiGenerator:
             f.writelines(model)
             f.close()
             print("Finished making {}_model".format(tablename))
-        print(self.tables)
         self.makeRest()
 
     def makeRest(self):
