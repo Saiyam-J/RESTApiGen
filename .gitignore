@@ -1,4 +1,5 @@
 # created by virtualenv automatically
+src/__pycache__/*
 bin/*
 dist/*
 include/*
