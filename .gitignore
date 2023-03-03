@@ -1,5 +1,6 @@
 # created by virtualenv automatically
 src/__pycache__/*
+.idea/*
 bin/*
 dist/*
 include/*
