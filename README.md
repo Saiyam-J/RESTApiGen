@@ -3,17 +3,17 @@ RESTAPIGen is a tool that works with an existing SQL database and autogenerates 
 
 # Features
 
-- Makes Models and REST files for each table so its easier to modulate and customize as per the needs.
-- Integrates flask-blueprints and auto registers the models.
-- Accepts requests in the form of application/json and also responds in JSON.
-- Auto-detects one-to-one, one-to-many and many-to-many relationships and creates an application level soft link, even if the SQL tables are not hard indexed.
-- Responds with an entire set of Collection based on the detected relationship, performs a JOIN wherever required, automatically.
-- Makes the following REST APIs for each table
--- `GET` LIST : Retrieve all records from a table
--- `POST` COLLECTION : Insert a record into the table
--- `GET` GET : Retrieve a row or an entire Collection from a table
--- `PATCH` PUT : Update a row with newer data in a table
--- `DELETE` PURGE : Performs a delete operation of a row or a collection in a table
+* Makes Models and REST files for each table so its easier to modulate and customize as per the needs.
+* Integrates flask-blueprints and auto registers the models.
+* Accepts requests in the form of application/json and also responds in JSON.
+* Auto-detects one-to-one, one-to-many and many-to-many relationships and creates an application level soft link, even if the SQL tables are not hard indexed.
+* Responds with an entire set of Collection based on the detected relationship, performs a JOIN wherever required, automatically.
+* Makes the following REST APIs for each table
+  * `GET` LIST : Retrieve all records from a table
+  * `POST` COLLECTION : Insert a record into the table
+  * `GET` GET : Retrieve a row or an entire Collection from a table
+  * `PATCH` PUT : Update a row with newer data in a table
+  * `DELETE` PURGE : Performs a delete operation of a row or a collection in a table
 
 # Usage Instructions
 
