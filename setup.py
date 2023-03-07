@@ -5,6 +5,7 @@ long_description = (this_directory / "README.md").read_text()
 setup(
     name="RESTApiGen",
     version="0.1.4",
+    description="REST API auto-generator.",
     url="https://github.com/Saiyam-J/RESTApiGen",
     author="Saiyam Jain",
     license="MIT",
