@@ -4,7 +4,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text()
 setup(
     name="RESTApiGen",
-    version="0.1.6",
+    version="0.1.7",
     description="REST API auto-generator.",
     url="https://github.com/Saiyam-J/RESTApiGen",
     author="Saiyam Jain",

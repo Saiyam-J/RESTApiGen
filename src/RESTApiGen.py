@@ -290,7 +290,7 @@ class RESTApiGenerator:
 
             resource["delete"] = [
                             "\tdef delete(self, {}_id):\n".format(tablename),
-                            "\t\t{}= {}.query.get_or_404({}_id)\n".format(tablename, tablename.capitalize(), tablename),
+                            "\t\t{} = {}.query.get_or_404({}_id)\n".format(tablename, tablename.capitalize(), tablename),
                             "\t\tdb.session.delete({})\n\t\tdb.session.commit()\n\t\treturn '', 204\n".format(tablename)]
 
             api_bp = [
