@@ -330,7 +330,7 @@ class RESTApiGenerator:
             f.writelines(resource["patch"])
             f.writelines(resource["delete"])
             f.close()
-            print("Finished making {}_routes\n".format(tablename))
+            print("Finished making {}_routes".format(tablename))
         self.makeapp()
 
     def makeapp(self):

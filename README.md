@@ -1,5 +1,6 @@
 # Project Description
-RESTAPIGen is a tool that works with an existing SQL database and autogenerates back-end files based on the structure of the SQL. It creates Models that auto-detects the field type. Further, after creating the Models, it harnesses the combined power of flask-blueprint and flask-marshmallow to create APIs around the pre-generated Models. The final result is a fully-working RESTFul API which is ready to be customized. Statistically, 100% of the developers were able to create a kick-starter boilerplate API which saved several days of monotonous coding.
+RESTAPIGen is a tool that works with an existing SQL database and autogenerates back-end files based on the structure of the SQL. It creates Models that auto-detects the field type. Further, after creating the Models, it makes API routes for each table using the pre-generated Models. It can also use blueprints to make more modulated back-end files by
+harnessing the combined power of flask-blueprint and flask-marshmallow to create APIs around the pre-generated Models. The final result is a fully-working RESTFul API which is ready to be customized. Statistically, 100% of the developers were able to create a kick-starter boilerplate API which saved several days of monotonous coding.
 
 # Features
 
@@ -8,6 +9,7 @@ RESTAPIGen is a tool that works with an existing SQL database and autogenerates 
 * Accepts requests in the form of application/json and also responds in JSON.
 * Auto-detects one-to-one, one-to-many and many-to-many relationships and creates an application level soft link, even if the SQL tables are not hard indexed.
 * Responds with an entire set of Collection based on the detected relationship, performs a JOIN wherever required, automatically.
+* Supports all data-typed Primary Keys. Your primary keys don't necessarily have to be an integer 'id'.
 * Makes the following REST APIs for each table
   * `GET` LIST : Retrieve all records from a table
   * `POST` COLLECTION : Insert a record into the table
@@ -46,6 +48,14 @@ RESTApiGen -u <username> -d <dbname> -p <password>
 | -\-database | -d           | Enter the database name          |
 | -\-host     | -ho          | (Optional) Enter the hostname    |
 | -\-port     | -po          | (Optional) Enter the port number |
+----------------------------
+## List of flags
+| Argument              | Usage                            |
+|-----------------------|----------------------------------|
+| -\-use\-blueprints  |  Makes the back-end files using flask-blueprints and flask-marshmallow        |
+| -\-disbale-foreignkey |  Disables Foreign Key checker and doesnt make relations |
+| -\-only-models |  Just makes the Models, nothing more
+
 --------------------------------------
 
 ## Security Warning
